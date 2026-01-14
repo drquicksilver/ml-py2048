@@ -68,7 +68,6 @@ class AutoPlayApp(App):
         self._menu.refresh()
 
     def _start_strategy(self, index: int) -> None:
-        self._stop_autoplay()
         self._selected = self._strategies[index]
         self._status.update(f"Running: {self._selected.name}")
         self._start_time = time.monotonic()
@@ -78,15 +77,16 @@ class AutoPlayApp(App):
         self._board = starting_board()
         self._rng = None
         self._player = self._selected.factory()
-        self._auto_timer = self.set_interval(0.01, self._run_step, name="auto_play")
+        if self._auto_timer is None:
+            self._auto_timer = self.set_interval(0.01, self._run_step, name="auto_play")
+        else:
+            self._auto_timer.reset()
+            self._auto_timer.resume()
 
     def _stop_autoplay(self) -> None:
         if self._auto_timer is None:
             return
-        timer = self._auto_timer
-        self._auto_timer = None
-        timer.pause()
-        self.call_later(timer.stop)
+        self._auto_timer.pause()
 
     def _finish_run(self, board, status: str, status_line: str | None = None) -> None:
         self._stats.update(self._format_stats(board, status))
