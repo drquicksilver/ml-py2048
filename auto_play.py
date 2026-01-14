@@ -69,6 +69,12 @@ class AutoPlayApp(App):
         )
         self._menu.refresh()
 
+    def on_key(self, event) -> None:
+        if event.key not in {"up", "down", "pageup", "pagedown", "home", "end"}:
+            return
+        self.call_after_refresh(self._menu.refresh)
+        self.call_after_refresh(self.refresh)
+
     def _start_strategy(self, index: int) -> None:
         self._selected = self._strategies[index]
         self._status.update(f"Running: {self._selected.name}")
