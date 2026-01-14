@@ -83,8 +83,10 @@ class AutoPlayApp(App):
     def _stop_autoplay(self) -> None:
         if self._auto_timer is None:
             return
-        self._auto_timer.stop()
+        timer = self._auto_timer
         self._auto_timer = None
+        timer.pause()
+        self.call_later(timer.stop)
 
     def _finish_run(self, board, status: str, status_line: str | None = None) -> None:
         self._stats.update(self._format_stats(board, status))
