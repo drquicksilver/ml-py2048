@@ -23,6 +23,18 @@ class FakeRng:
         return self.random_value
 
 
+class SequenceRng:
+    def __init__(self, choices, random_values):
+        self._choices = list(choices)
+        self._random_values = list(random_values)
+
+    def choice(self, _sequence):
+        return self._choices.pop(0)
+
+    def random(self):
+        return self._random_values.pop(0)
+
+
 class TestGame2048Moves(unittest.TestCase):
     def test_slide_left_merges_once(self):
         board = Board.from_rows(
@@ -178,6 +190,13 @@ class TestRandomTile(unittest.TestCase):
     def test_has_moves_no_merge(self):
         board = Board.from_rows([[2, 4], [8, 16]])
         self.assertFalse(board.has_moves())
+
+    def test_starting_board_uses_two_tiles(self):
+        rng = SequenceRng(choices=[(0, 0), (1, 1)], random_values=[0.9, 0.9])
+        board = Board.from_rows([[0, 0], [0, 0]])
+        board = add_random_tile(board, rng=rng)
+        board = add_random_tile(board, rng=rng)
+        self.assertEqual(board.grid, [[2, 0], [0, 2]])
 
     def test_tile_score_powers_of_two(self):
         self.assertEqual(tile_score(2), 3)

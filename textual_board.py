@@ -247,7 +247,7 @@ class BoardApp(App):
         lines = board_text.splitlines()
         score_text = self._score_text()
         indicator = self._animation_indicator()
-        right_lines = [indicator, score_text]
+        right_lines = [indicator, score_text, "Ctrl-Q to quit"]
         if self._status_message:
             right_lines.append(self._status_message)
         target_line = len(lines) // 2

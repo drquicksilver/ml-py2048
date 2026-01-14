@@ -118,3 +118,14 @@ def add_random_tile(board: Board, rng: Optional[random.Random] = None) -> Board:
     new_grid = [list(row) for row in board.grid]
     new_grid[row_index][col_index] = value
     return Board(size=board.size, grid=new_grid)
+
+
+def starting_board(
+    size: int = 4, tiles: int = 2, rng: Optional[random.Random] = None
+) -> Board:
+    rng = rng or random.Random()
+    grid = [[0] * size for _ in range(size)]
+    board = Board(size=size, grid=grid)
+    for _ in range(tiles):
+        board = add_random_tile(board, rng=rng)
+    return board

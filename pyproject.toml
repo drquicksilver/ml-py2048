@@ -10,6 +10,7 @@ dependencies = [
 
 [project.scripts]
 test = "test_runner:main"
+auto = "auto_play:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -17,9 +18,14 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = [
+    "auto_play",
+    "auto_players",
     "game2048",
     "main",
     "test_runner",
     "textual_animation",
     "textual_board",
 ]
+
+[tool.setuptools.packages.find]
+include = ["strategies"]
