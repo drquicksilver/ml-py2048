@@ -93,8 +93,9 @@ class AutoPlayApp(App):
         self._status.update(status_line or status)
         self._running = False
         self._stop_autoplay()
-        self._menu.focus()
-        self._menu.refresh()
+        self.call_later(self._menu.focus)
+        self.call_later(self._menu.refresh)
+        self.call_later(self.refresh)
 
     def _run_step(self) -> None:
         if not self._running or self._board is None or self._player is None:
