@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-import asyncio
 import time
 from pathlib import Path
 
 from textual.app import App, ComposeResult
+from textual.timer import Timer
 from textual.widgets import OptionList, Static
 
 from auto_players import StrategySpec, apply_move, legal_moves, load_strategies, max_tile, spawn_tile
 from game2048 import starting_board
+
+
+class AutoPlayMenu(OptionList):
+    def watch_highlighted(self, highlighted: int | None) -> None:
+        super().watch_highlighted(highlighted)
+        self.refresh()
+        if self.is_attached:
+            self.app.refresh()
 
 
 class AutoPlayApp(App):
@@ -17,7 +25,7 @@ class AutoPlayApp(App):
         self._strategy_dir = strategy_dir
         self._strategies: list[StrategySpec] = []
         self._errors: list[str] = []
-        self._menu = OptionList()
+        self._menu = AutoPlayMenu()
         self._stats = Static()
         self._status = Static()
         self._debug = Static()
@@ -25,6 +33,10 @@ class AutoPlayApp(App):
         self._move_count = 0
         self._start_time = 0.0
         self._running = False
+        self._board = None
+        self._player = None
+        self._rng = None
+        self._auto_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         yield Static("Select an automated player strategy:")
@@ -57,6 +69,12 @@ class AutoPlayApp(App):
         )
         self._menu.refresh()
 
+    def on_key(self, event) -> None:
+        if event.key not in {"up", "down", "pageup", "pagedown", "home", "end"}:
+            return
+        self.call_after_refresh(self._menu.refresh)
+        self.call_after_refresh(self.refresh)
+
     def _start_strategy(self, index: int) -> None:
         self._selected = self._strategies[index]
         self._status.update(f"Running: {self._selected.name}")
@@ -64,51 +82,51 @@ class AutoPlayApp(App):
         self._move_count = 0
         self._stats.update("Starting...")
         self._running = True
-        self.run_worker(self._run_game(self._selected), exclusive=True)
+        self._board = starting_board()
+        self._rng = None
+        self._player = self._selected.factory()
+        if self._auto_timer is None:
+            self._auto_timer = self.set_interval(0.01, self._run_step, name="auto_play")
+        else:
+            self._auto_timer.reset()
+            self._auto_timer.resume()
 
-    async def _run_game(self, strategy: StrategySpec) -> None:
-        board = starting_board()
-        rng = None
-        player = strategy.factory()
-        while True:
-            if not board.has_moves():
-                self._stats.update(self._format_stats(board, "Game Over"))
-                self._status.update("Game Over")
-                self._running = False
-                self._menu.focus()
-                self._menu.refresh()
-                return
-
-            grid_view = tuple(tuple(row) for row in board.grid)
-            direction = player.next_move(grid_view)
-            self._move_count += 1
-
-            legal = legal_moves(board)
-            if direction not in legal:
-                message = f"Illegal move at {self._move_count}: {direction}"
-                self._stats.update(self._format_stats(board, message))
-                self._status.update(message)
-                self._running = False
-                self._menu.focus()
-                self._menu.refresh()
-                return
-
-            board = apply_move(board, direction)
-            board = spawn_tile(board, rng=rng)
-            self._stats.update(self._format_stats(board, "Running"))
-            await asyncio.sleep(0)
-
-    def on_key(self, event) -> None:
-        if event.key not in {"enter", "return"}:
+    def _stop_autoplay(self) -> None:
+        if self._auto_timer is None:
             return
-        self._debug.update(
-            f"key={event.key} highlighted={self._menu.highlighted} running={self._running}"
-        )
-        if not self._strategies:
+        self._auto_timer.pause()
+
+    def _finish_run(self, board, status: str, status_line: str | None = None) -> None:
+        self._stats.update(self._format_stats(board, status))
+        self._status.update(status_line or status)
+        self._running = False
+        self._stop_autoplay()
+        self.call_later(self._menu.focus)
+        self.call_later(self._menu.refresh)
+        self.call_later(self.refresh)
+
+    def _run_step(self) -> None:
+        if not self._running or self._board is None or self._player is None:
             return
-        if self._menu.highlighted is None:
+        board = self._board
+        if not board.has_moves():
+            self.call_later(self._finish_run, board, "Game Over")
             return
-        self._start_strategy(self._menu.highlighted)
+
+        grid_view = tuple(tuple(row) for row in board.grid)
+        direction = self._player.next_move(grid_view)
+        self._move_count += 1
+
+        legal = legal_moves(board)
+        if direction not in legal:
+            message = f"Illegal move at {self._move_count}: {direction}"
+            self.call_later(self._finish_run, board, message, message)
+            return
+
+        board = apply_move(board, direction)
+        board = spawn_tile(board, rng=self._rng)
+        self._board = board
+        self._stats.update(self._format_stats(board, "Running"))
 
     def _format_stats(self, board, status: str) -> str:
         elapsed = time.monotonic() - self._start_time

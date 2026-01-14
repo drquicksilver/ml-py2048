@@ -21,9 +21,6 @@ class TestableAutoPlayApp(AutoPlayApp):
             self._menu.add_option(spec.name)
         self._menu.highlighted = 0
 
-    async def _run_game(self, _strategy):
-        await asyncio.sleep(0)
-
     def on_option_list_option_selected(self, event) -> None:
         if not self._strategies:
             return
