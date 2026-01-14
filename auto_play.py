@@ -15,6 +15,8 @@ class AutoPlayMenu(OptionList):
     def watch_highlighted(self, highlighted: int | None) -> None:
         super().watch_highlighted(highlighted)
         self.refresh()
+        if self.is_attached:
+            self.app.refresh()
 
 
 class AutoPlayApp(App):
