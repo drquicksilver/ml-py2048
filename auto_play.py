@@ -102,7 +102,7 @@ class AutoPlayApp(App):
             return
         board = self._board
         if not board.has_moves():
-            self._finish_run(board, "Game Over")
+            self.call_later(self._finish_run, board, "Game Over")
             return
 
         grid_view = tuple(tuple(row) for row in board.grid)
@@ -112,7 +112,7 @@ class AutoPlayApp(App):
         legal = legal_moves(board)
         if direction not in legal:
             message = f"Illegal move at {self._move_count}: {direction}"
-            self._finish_run(board, message, message)
+            self.call_later(self._finish_run, board, message, message)
             return
 
         board = apply_move(board, direction)
